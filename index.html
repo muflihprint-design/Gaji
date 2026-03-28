@@ -3,57 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GajiTrack Cloud - Spreadsheet Sync</title>
+    <title>GajiTrack Cloud - Full Features</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #f8fafc;
-        }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(226, 232, 240, 0.8);
-        }
-        .pulse-dot {
-            width: 8px; height: 8px;
-            background-color: #10b981;
-            border-radius: 50%;
-            display: inline-block;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+        .glass-panel { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(226, 232, 240, 0.8); }
+        .pulse-dot { width: 8px; height: 8px; background-color: #10b981; border-radius: 50%; display: inline-block; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
         .row-clickable:hover { cursor: pointer; background-color: #f1f5f9; }
-        .input-accounting {
-            text-align: right;
-            font-family: 'Courier New', Courier, monospace;
-            font-weight: 700;
-        }
-        .row-inactive {
-            opacity: 0.5;
-            filter: grayscale(1);
-        }
-        input[type="number"]::-webkit-inner-spin-button, 
-        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        
-        #loadingOverlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.8);
-            display: flex; justify-content: center; align-items: center;
-            z-index: 100; transition: opacity 0.3s;
-        }
+        .input-accounting { text-align: right; font-family: 'Courier New', Courier, monospace; font-weight: 700; }
+        .row-inactive { opacity: 0.5; filter: grayscale(1); }
+        .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.7); display: flex; align-items: center; justify-content: center; z-index: 100; visibility: hidden; }
+        .loading-overlay.active { visibility: visible; }
+        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
 <body class="p-4 md:p-8 text-slate-900">
-    <div id="loadingOverlay">
-        <div class="flex flex-col items-center gap-4">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Menghubungkan ke Cloud...</p>
+    <div id="loader" class="loading-overlay">
+        <div class="flex flex-col items-center gap-2">
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+            <p class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Sinkronisasi Cloud...</p>
         </div>
     </div>
 
@@ -62,129 +32,83 @@
             <div>
                 <div class="flex items-center gap-2 mb-2">
                     <span class="px-3 py-1 bg-indigo-100 text-indigo-700 text-[10px] font-extrabold rounded-full uppercase tracking-tighter flex items-center gap-2">
-                        <span class="pulse-dot"></span> Sinkronisasi Aktif
+                        <span class="pulse-dot"></span> Spreadsheet Database: Active
                     </span>
                 </div>
                 <h1 class="text-4xl font-extrabold tracking-tight text-slate-900">Payroll Tracker</h1>
-                <p class="text-slate-500 font-medium">Manajemen akrual gaji dengan sinkronisasi cloud otomatis</p>
-                <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Sistem: <span id="displayToday"></span></p>
+                <p class="text-slate-500 font-medium">Real-time sync dengan Google Sheets</p>
+                <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Live: <span id="displayToday"></span></p>
             </div>
             <div class="bg-slate-900 text-white p-6 rounded-3xl shadow-2xl flex flex-col min-w-[280px] border-b-4 border-emerald-500">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Estimasi Akrual Kas (Aktif)</span>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Akrual Kas (Aktif)</span>
                 <span id="grandTotal" class="text-3xl font-black text-emerald-400">Rp 0</span>
             </div>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Sidebar: Forms -->
             <div class="lg:col-span-5 space-y-6">
-                <!-- Form Data Karyawan -->
                 <div class="glass-panel p-6 rounded-3xl shadow-sm space-y-5 border-t-4 border-indigo-500">
-                    <div class="flex justify-between items-center">
-                        <h2 id="formTitle" class="text-xl font-bold flex items-center gap-2 text-slate-800">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Input Data
-                        </h2>
-                    </div>
-
+                    <h2 id="formTitle" class="text-xl font-bold text-slate-800">Data Karyawan</h2>
                     <input type="hidden" id="editId">
-
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Nama Lengkap</label>
-                            <input type="text" id="name" class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition font-medium" placeholder="Nama Karyawan">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Nama Karyawan</label>
+                            <input type="text" id="name" class="w-full px-4 py-3 rounded-2xl border border-slate-200 outline-none font-medium" placeholder="Contoh: John Doe">
                         </div>
-
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Gaji Pokok</label>
-                                <input type="text" id="salaryDisplay" 
-                                    class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none transition input-accounting text-emerald-700 bg-emerald-50/30" 
-                                    placeholder="Rp 0"
-                                    oninput="formatAccountingInput(this)">
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Gaji Bulanan</label>
+                                <input type="text" id="salaryDisplay" class="w-full px-4 py-3 rounded-2xl border border-slate-200 outline-none input-accounting text-emerald-700 bg-emerald-50/30" placeholder="Rp 0" oninput="formatAccountingInput(this)">
                                 <input type="hidden" id="salary">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-indigo-600 uppercase mb-1.5 ml-1">Tgl Join (Siklus)</label>
-                                <input type="number" id="startDay" min="1" max="31" class="w-full px-4 py-3 rounded-2xl border-2 border-indigo-100 focus:border-indigo-500 outline-none transition font-black text-slate-700 text-center text-lg" placeholder="15">
+                                <label class="block text-xs font-bold text-indigo-600 uppercase mb-1.5 ml-1">Tgl Join (1-31)</label>
+                                <input type="number" id="startDay" min="1" max="31" class="w-full px-4 py-3 rounded-2xl border-2 border-indigo-100 outline-none text-center font-black" placeholder="15">
                             </div>
                         </div>
 
+                        <!-- Cuti Individu -->
                         <div class="p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
-                            <label class="block text-xs font-black text-slate-500 uppercase mb-3">Cuti / Izin Khusus</label>
+                            <label class="block text-xs font-black text-slate-500 uppercase mb-3">Cuti Individu</label>
                             <div class="grid grid-cols-5 gap-2 mb-3">
-                                <input type="number" id="tempHolidayStart" min="1" max="31" class="col-span-2 px-2 py-2 rounded-lg border border-slate-200 text-xs outline-none text-center font-bold" placeholder="Mulai">
-                                <input type="number" id="tempHolidayEnd" min="1" max="31" class="col-span-2 px-2 py-2 rounded-lg border border-slate-200 text-xs outline-none text-center font-bold" placeholder="Selesai">
-                                <button onclick="addHolidayRow()" class="bg-indigo-500 text-white rounded-lg flex items-center justify-center hover:bg-indigo-600 transition shadow-md shadow-indigo-100">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-                                    </svg>
+                                <input type="number" id="tempHolidayStart" min="1" max="31" class="col-span-2 px-2 py-2 rounded-lg border border-slate-200 text-xs text-center font-bold" placeholder="Tgl Mulai">
+                                <input type="number" id="tempHolidayEnd" min="1" max="31" class="col-span-2 px-2 py-2 rounded-lg border border-slate-200 text-xs text-center font-bold" placeholder="Tgl Selesai">
+                                <button onclick="addHolidayRow()" class="bg-indigo-500 text-white rounded-lg flex items-center justify-center">
+                                    +
                                 </button>
                             </div>
-                            <div id="holidayList" class="space-y-2 max-h-32 overflow-y-auto pr-1">
-                                <p id="noHolidayMsg" class="text-[10px] text-slate-400 italic text-center py-2">Belum ada cuti terdaftar.</p>
-                            </div>
+                            <div id="holidayList" class="space-y-2 max-h-32 overflow-y-auto"></div>
                         </div>
                     </div>
-
-                    <div class="flex flex-col gap-2 pt-2">
-                        <button id="btnSubmit" onclick="saveEmployee()" class="w-full py-4 bg-slate-900 hover:bg-black text-white font-black rounded-2xl shadow-xl transition active:scale-95 uppercase tracking-wider">
-                            Simpan ke Cloud
-                        </button>
-                        <button id="btnCancel" onclick="resetForm()" class="hidden w-full py-2 text-slate-400 font-bold text-[10px] hover:text-slate-600 transition text-center uppercase tracking-widest">
-                            Batalkan Perubahan
-                        </button>
-                    </div>
+                    <button id="btnSubmit" onclick="saveEmployee()" class="w-full py-4 bg-slate-900 text-white font-black rounded-2xl shadow-xl transition active:scale-95 uppercase">Simpan & Sync</button>
+                    <button id="btnCancel" onclick="resetForm()" class="hidden w-full text-xs font-bold text-slate-400 uppercase">Batalkan Edit</button>
                 </div>
 
-                <!-- Global Holidays -->
-                <div class="glass-panel p-6 rounded-3xl shadow-sm space-y-5 border-t-4 border-emerald-500">
-                    <h2 class="text-xl font-bold flex items-center gap-2 text-slate-800">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002 2z" />
-                        </svg>
-                        Libur Nasional
-                    </h2>
+                <!-- Libur Nasional -->
+                <div class="glass-panel p-6 rounded-3xl shadow-sm space-y-4 border-t-4 border-emerald-500">
+                    <h2 class="text-xl font-bold text-slate-800">Libur Nasional</h2>
                     <div class="grid grid-cols-5 gap-2">
-                        <input type="number" id="globalHolidayStart" min="1" max="31" class="col-span-2 px-3 py-3 rounded-xl border border-slate-200 text-xs outline-none text-center font-bold" placeholder="Tgl Mulai">
-                        <input type="number" id="globalHolidayEnd" min="1" max="31" class="col-span-2 px-3 py-3 rounded-xl border border-slate-200 text-xs outline-none text-center font-bold" placeholder="Tgl Selesai">
-                        <button onclick="addGlobalHoliday()" class="bg-emerald-500 text-white rounded-xl flex items-center justify-center hover:bg-emerald-600 transition shadow-lg shadow-emerald-100">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-                            </svg>
-                        </button>
+                        <input type="number" id="globalHolidayStart" min="1" max="31" class="col-span-2 px-3 py-3 rounded-xl border border-slate-200 text-xs text-center font-bold" placeholder="Tgl Mulai">
+                        <input type="number" id="globalHolidayEnd" min="1" max="31" class="col-span-2 px-3 py-3 rounded-xl border border-slate-200 text-xs text-center font-bold" placeholder="Tgl Selesai">
+                        <button onclick="addGlobalHoliday()" class="bg-emerald-500 text-white rounded-xl">+</button>
                     </div>
                     <div id="globalHolidayList" class="space-y-2 max-h-40 overflow-y-auto"></div>
                 </div>
             </div>
 
-            <!-- Dashboard Table -->
+            <!-- Table Section -->
             <div class="lg:col-span-7">
                 <div class="glass-panel rounded-3xl overflow-hidden shadow-sm">
-                    <div class="p-6 border-b border-slate-100 flex flex-wrap justify-between items-center bg-white/50 gap-4">
-                        <h2 class="font-bold text-slate-800 uppercase tracking-tighter">Monitoring Akrual</h2>
-                        <div class="flex gap-4 items-center">
-                            <button onclick="toggleAllStatus()" class="text-[10px] font-black text-amber-600 hover:text-amber-800 transition uppercase border-r border-slate-200 pr-4">Mute Semua</button>
-                            <button onclick="clearAllData()" class="text-[10px] font-black text-red-400 hover:text-red-600 transition uppercase">Hapus Data</button>
-                        </div>
+                    <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-white/50">
+                        <h2 class="font-bold text-slate-800 uppercase">Daftar Akrual</h2>
+                        <button onclick="fetchFromCloud()" class="text-[10px] font-black text-indigo-500 uppercase">Refresh Cloud</button>
                     </div>
-
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
-                            <thead>
-                                <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">
-                                    <th class="px-6 py-4">Karyawan</th>
-                                    <th class="px-6 py-4 text-center">Net Kerja</th>
-                                    <th class="px-6 py-4 text-right">Akumulasi Gaji</th>
-                                    <th class="px-6 py-4 text-center">Aksi</th>
-                                </tr>
-                            </thead>
                             <tbody id="payrollTable" class="divide-y divide-slate-100"></tbody>
                         </table>
-                        <div id="emptyState" class="p-20 text-center flex flex-col items-center gap-2">
-                            <p class="text-sm font-medium text-slate-300 italic">Data kosong. Tambahkan karyawan untuk mulai melacak.</p>
-                        </div>
+                        <div id="emptyState" class="p-10 text-center text-slate-300 italic">Memuat data...</div>
                     </div>
                 </div>
             </div>
@@ -193,120 +117,166 @@
 
     <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 px-8 py-4 bg-slate-900 text-white rounded-2xl shadow-2xl opacity-0 transition-all pointer-events-none z-50 text-[10px] font-black uppercase tracking-widest"></div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Firebase Config & Environment Vars
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'gajitrack-v1';
-        const SPREADSHEET_URL = "https://script.google.com/macros/s/AKfycbyopo7qDEbhkBELDqhvlH3UenWrItDQs-q4oUb_biGy5jiSc9a9SYNtxLe6ZAFVp9Bd/exec";
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        // State Management
+    <script>
+        // MASUKKAN URL WEB APP GOOGLE APPS SCRIPT ANDA DI SINI
+        const SCRIPT_URL = "URL_APPS_SCRIPT_ANDA"; 
+        
         let employees = [];
-        let currentHolidays = [];
         let globalHolidays = [];
-        let currentUser = null;
+        let currentHolidays = [];
 
-        // Initialize App & Auth
-        const init = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        currentUser = user;
-                        setupListeners();
-                        hideLoader();
-                    }
-                });
-            } catch (err) {
-                console.error("Auth Error", err);
-                showNotify("GAGAL TERHUBUNG KE CLOUD");
-            }
+        window.onload = async () => {
+            updateLiveClock();
+            await fetchFromCloud();
+            setInterval(updateRealTimeValues, 1000);
         };
 
-        const setupListeners = () => {
-            if (!currentUser) return;
-            
-            // Listen to Employee Data (Private per user)
-            const empCol = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'employees');
-            onSnapshot(empCol, (snapshot) => {
-                employees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderTable();
-            }, (error) => showNotify("Kesalahan Sinkronisasi"));
+        function showLoader(show) { document.getElementById('loader').classList.toggle('active', show); }
 
-            // Listen to Global Settings
-            const configRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'globalConfig');
-            onSnapshot(configRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    globalHolidays = docSnap.data().globalHolidays || [];
-                    renderGlobalHolidayList();
-                    renderTable();
+        async function fetchFromCloud() {
+            if (SCRIPT_URL === "URL_APPS_SCRIPT_ANDA") {
+                showNotify("ERROR: URL SCRIPT BELUM DISET");
+                return;
+            }
+            showLoader(true);
+            try {
+                const response = await fetch(SCRIPT_URL);
+                const data = await response.json();
+                employees = data.employees || [];
+                globalHolidays = data.globalHolidays || [];
+                renderTable();
+                renderGlobalHolidayList();
+            } catch (e) {
+                showNotify("GAGAL MEMUAT DATA");
+            } finally { showLoader(false); }
+        }
+
+        async function syncToCloud() {
+            showLoader(true);
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ employees, globalHolidays })
+                });
+                showNotify("CLOUD TERSINKRONISASI");
+            } catch (e) {
+                showNotify("GAGAL SYNC");
+            } finally { showLoader(false); }
+        }
+
+        function formatAccountingInput(input) {
+            let value = input.value.replace(/[^0-9]/g, "");
+            if (value === "") {
+                input.value = "";
+                document.getElementById('salary').value = "";
+                return;
+            }
+            document.getElementById('salary').value = value;
+            input.value = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
+        }
+
+        function formatIDR(val) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val); }
+
+        function updateLiveClock() { document.getElementById('displayToday').innerText = new Date().toLocaleString('id-ID'); }
+
+        function createDateFromDay(day) {
+            const now = new Date();
+            const date = new Date(now.getFullYear(), now.getMonth(), parseInt(day));
+            date.setHours(0,0,0,0);
+            return date;
+        }
+
+        function countWorkDays(start, end) {
+            let count = 0;
+            let cur = new Date(start);
+            while (cur <= end) {
+                if (cur.getDay() !== 0) count++;
+                cur.setDate(cur.getDate() + 1);
+            }
+            return count;
+        }
+
+        function getOverlapWorkDays(startA, endA, startB, endB) {
+            const start = new Date(Math.max(new Date(startA), new Date(startB)));
+            const end = new Date(Math.min(new Date(endA), new Date(endB)));
+            return start > end ? 0 : countWorkDays(start, end);
+        }
+
+        function getCycleInfo(startDateStr, now) {
+            const join = new Date(startDateStr);
+            let cycleStart = new Date(now.getFullYear(), now.getMonth(), join.getDate());
+            if (now < cycleStart) cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, join.getDate());
+            let cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, join.getDate());
+            cycleEnd.setDate(cycleEnd.getDate() - 1);
+            return { start: cycleStart, end: cycleEnd };
+        }
+
+        function calculateAccrual(emp, now) {
+            if (!emp.isActive) return { netWorkDays: 0, holidayTaken: 0, totalAmount: 0 };
+            const cycle = getCycleInfo(emp.startDate, now);
+            const allHolidays = [...(emp.holidays || []), ...globalHolidays];
+            
+            let totalHolidayInCycle = 0;
+            allHolidays.forEach(h => totalHolidayInCycle += getOverlapWorkDays(cycle.start, cycle.end, h.start, h.end));
+            
+            const stdDays = Math.max(1, countWorkDays(cycle.start, cycle.end) - totalHolidayInCycle);
+            
+            let holidayTaken = 0;
+            allHolidays.forEach(h => holidayTaken += getOverlapWorkDays(cycle.start, now, h.start, h.end));
+            
+            const netWorkDays = Math.max(0, countWorkDays(cycle.start, now) - holidayTaken);
+            const daily = emp.salary / stdDays;
+            
+            return { netWorkDays, holidayTaken, totalAmount: daily * netWorkDays };
+        }
+
+        function updateRealTimeValues() {
+            updateLiveClock();
+            const now = new Date();
+            let grand = 0;
+            employees.forEach(emp => {
+                const calc = calculateAccrual(emp, now);
+                grand += calc.totalAmount;
+                const row = document.getElementById(`row-${emp.id}`);
+                if (row && emp.isActive) {
+                    row.querySelector('.live-amount').innerText = formatIDR(calc.totalAmount);
+                    row.querySelector('.live-net').innerText = `${calc.netWorkDays} Hari (-${calc.holidayTaken})`;
                 }
             });
-        };
+            document.getElementById('grandTotal').innerText = formatIDR(grand);
+        }
 
-        const hideLoader = () => {
-            const loader = document.getElementById('loadingOverlay');
-            loader.style.opacity = '0';
-            setTimeout(() => loader.style.display = 'none', 300);
-        };
-
-        // UI Handlers
-        window.saveEmployee = async () => {
-            if (!currentUser) return;
+        async function saveEmployee() {
             const id = document.getElementById('editId').value;
             const name = document.getElementById('name').value;
-            const salaryValue = document.getElementById('salary').value;
-            const startDay = document.getElementById('startDay').value;
-            
-            if (!name || !salaryValue || !startDay) return showNotify("DATA TIDAK LENGKAP");
-            
-            const joinDate = createJoinDateFromDay(startDay);
+            const salary = document.getElementById('salary').value;
+            const day = document.getElementById('startDay').value;
+            if(!name || !salary || !day) return showNotify("LENGKAPI DATA");
+
             const empData = {
-                name, 
-                salary: parseFloat(salaryValue), 
-                startDate: joinDate.toISOString(),
-                startDayInput: startDay,
+                id: id ? parseInt(id) : Date.now(),
+                name,
+                salary: parseFloat(salary),
+                startDate: new Date(new Date().getFullYear(), new Date().getMonth(), day).toISOString(),
+                startDayInput: day,
                 holidays: [...currentHolidays],
-                isActive: true,
-                updatedAt: new Date().toISOString()
+                isActive: true
             };
 
-            try {
-                const docId = id || Date.now().toString();
-                await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'employees', docId), empData);
-                showNotify("DATA DISIMPAN KE CLOUD");
-                syncToSpreadsheet(empData); // Trigger background sync to Google Sheet
-                resetForm();
-            } catch (e) {
-                showNotify("GAGAL MENYIMPAN");
+            if (id) {
+                const idx = employees.findIndex(e => e.id == id);
+                employees[idx] = empData;
+            } else {
+                employees.push(empData);
             }
-        };
 
-        const syncToSpreadsheet = (data) => {
-            // Optional background sync to the provided web app
-            fetch(SPREADSHEET_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            }).catch(e => console.log("Spreadsheet sync skipped", e));
-        };
+            await syncToCloud();
+            renderTable();
+            resetForm();
+        }
 
-        window.editEmployee = (id) => {
+        function editEmployee(id) {
             const emp = employees.find(e => e.id == id);
-            if (!emp) return;
             document.getElementById('editId').value = emp.id;
             document.getElementById('name').value = emp.name;
             document.getElementById('salary').value = emp.salary;
@@ -314,226 +284,90 @@
             document.getElementById('startDay').value = emp.startDayInput;
             currentHolidays = [...(emp.holidays || [])];
             renderHolidayList();
-            document.getElementById('formTitle').innerText = "Update Karyawan";
-            document.getElementById('btnSubmit').innerText = "Update Cloud";
+            document.getElementById('formTitle').innerText = "Edit Karyawan";
             document.getElementById('btnCancel').classList.remove('hidden');
-        };
+        }
 
-        window.toggleStatus = async (id) => {
-            if (!currentUser) return;
-            const emp = employees.find(e => e.id == id);
-            if (!emp) return;
-            await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'employees', id), {
-                isActive: !emp.isActive
-            });
-        };
-
-        window.toggleAllStatus = async () => {
-            if (!currentUser) return;
-            const promises = employees.map(emp => 
-                updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'employees', emp.id), { isActive: false })
-            );
-            await Promise.all(promises);
-            showNotify("SEMUA DINONAKTIFKAN");
-        };
-
-        window.addGlobalHoliday = async () => {
-            if (!currentUser) return;
+        async function addGlobalHoliday() {
             const start = document.getElementById('globalHolidayStart').value;
             const end = document.getElementById('globalHolidayEnd').value;
             if (!start || !end) return;
-            
-            const newH = { 
-                start: createDateFromDay(start).toISOString(), 
-                end: createDateFromDay(end).toISOString() 
-            };
-            const updated = [...globalHolidays, newH];
-            
-            await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'globalConfig'), {
-                globalHolidays: updated
-            }, { merge: true });
-            
-            document.getElementById('globalHolidayStart').value = '';
-            document.getElementById('globalHolidayEnd').value = '';
-        };
-
-        window.removeGlobalHoliday = async (idx) => {
-            const updated = [...globalHolidays];
-            updated.splice(idx, 1);
-            await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'globalConfig'), {
-                globalHolidays: updated
-            });
-        };
-
-        window.clearAllData = async () => {
-            if (!confirm("Hapus semua data? Tindakan ini permanen.")) return;
-            for (let emp of employees) {
-                await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'employees', emp.id));
-            }
-            showNotify("DATABASE DIBERSIHKAN");
-        };
-
-        // Calculation Helpers
-        function formatIDR(val) {
-            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val || 0);
+            globalHolidays.push({ start: createDateFromDay(start).toISOString(), end: createDateFromDay(end).toISOString() });
+            await syncToCloud();
+            renderGlobalHolidayList();
+            renderTable();
         }
 
-        function createDateFromDay(day) {
-            const d = new Date();
-            return new Date(d.getFullYear(), d.getMonth(), parseInt(day), 0, 0, 0, 0);
+        function addHolidayRow() {
+            const start = document.getElementById('tempHolidayStart').value;
+            const end = document.getElementById('tempHolidayEnd').value;
+            if (!start || !end) return;
+            currentHolidays.push({ start: createDateFromDay(start).toISOString(), end: createDateFromDay(end).toISOString() });
+            renderHolidayList();
         }
 
-        function createJoinDateFromDay(day) {
-            const d = new Date();
-            let dateObj = new Date(d.getFullYear(), d.getMonth(), parseInt(day), 0, 0, 0, 0);
-            if (dateObj > d) dateObj = new Date(d.getFullYear(), d.getMonth() - 1, parseInt(day));
-            return dateObj;
-        }
-
-        function countWorkDays(start, end) {
-            let count = 0;
-            let current = new Date(start);
-            while (current <= end) {
-                if (current.getDay() !== 0) count++; // Non-Sunday
-                current.setDate(current.getDate() + 1);
-            }
-            return count;
-        }
-
-        function getOverlapWorkDays(sA, eA, sB, eB) {
-            const start = new Date(Math.max(new Date(sA), new Date(sB)));
-            const end = new Date(Math.min(new Date(eA), new Date(eB)));
-            return start <= end ? countWorkDays(start, end) : 0;
-        }
-
-        function calculateAccrual(emp, now) {
-            if (!emp.isActive) return { net: 0, off: 0, amount: 0, start: new Date(), end: new Date() };
-            
-            const join = new Date(emp.startDate);
-            let cycleStart = new Date(now.getFullYear(), now.getMonth(), join.getDate());
-            if (now < cycleStart) cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, join.getDate());
-            let cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, join.getDate());
-            cycleEnd.setDate(cycleEnd.getDate() - 1);
-
-            const allHolidays = [...(emp.holidays || []), ...globalHolidays];
-            
-            // Calc Full Cycle Days
-            const fullCycleWorkDays = countWorkDays(cycleStart, cycleEnd);
-            let holidayInCycle = 0;
-            allHolidays.forEach(h => holidayInCycle += getOverlapWorkDays(cycleStart, cycleEnd, h.start, h.end));
-            const stdDays = Math.max(1, fullCycleWorkDays - holidayInCycle);
-
-            // Calc Current Accrual
-            const rawWorkDaysNow = countWorkDays(cycleStart, now);
-            let holidayTakenNow = 0;
-            allHolidays.forEach(h => holidayTakenNow += getOverlapWorkDays(cycleStart, now, h.start, h.end));
-            
-            const net = Math.max(0, rawWorkDaysNow - holidayTakenNow);
-            return { net, off: holidayTakenNow, amount: (emp.salary / stdDays) * net, start: cycleStart, end: cycleEnd };
-        }
-
-        // Rendering Logic
         function renderTable() {
-            const tbody = document.getElementById('payrollTable');
-            const empty = document.getElementById('emptyState');
-            tbody.innerHTML = '';
-            
-            if (employees.length === 0) {
-                empty.classList.remove('hidden');
-                document.getElementById('grandTotal').innerText = formatIDR(0);
-                return;
-            }
-            
-            empty.classList.add('hidden');
-            const now = new Date();
-            let gTotal = 0;
-
+            const table = document.getElementById('payrollTable');
+            table.innerHTML = '';
+            document.getElementById('emptyState').classList.toggle('hidden', employees.length > 0);
             employees.forEach(emp => {
-                const res = calculateAccrual(emp, now);
-                if (emp.isActive) gTotal += res.amount;
-
-                const tr = document.createElement('tr');
-                tr.className = `row-clickable transition-all ${!emp.isActive ? 'row-inactive' : ''}`;
-                tr.onclick = (e) => { if(!e.target.closest('button')) editEmployee(emp.id); };
-                tr.innerHTML = `
-                    <td class="px-6 py-5">
-                        <p class="font-bold ${emp.isActive ? 'text-slate-900' : 'text-slate-400'}">${emp.name}</p>
-                        <p class="text-[9px] font-bold text-indigo-500 uppercase">
-                            ${emp.isActive ? `${formatD(res.start)} - ${formatD(res.end)}` : 'OFF'}
-                        </p>
+                const calc = calculateAccrual(emp, new Date());
+                const row = document.createElement('tr');
+                row.id = `row-${emp.id}`;
+                row.className = `row-clickable ${!emp.isActive ? 'row-inactive' : ''}`;
+                row.onclick = (e) => { if(!e.target.closest('button')) editEmployee(emp.id); };
+                row.innerHTML = `
+                    <td class="px-6 py-4">
+                        <p class="font-bold">${emp.name}</p>
+                        <p class="text-[9px] text-slate-400 font-bold live-net">${calc.netWorkDays} Hari</p>
                     </td>
-                    <td class="px-6 py-5 text-center">
-                        <div class="inline-flex flex-col items-center px-3 py-1.5 rounded-2xl bg-slate-50 border border-slate-100">
-                            <span class="text-xs font-black">${emp.isActive ? res.net + ' Hari' : '--'}</span>
-                            <span class="text-[8px] font-bold text-orange-500">-${res.off} Libur</span>
-                        </div>
-                    </td>
-                    <td class="px-6 py-5 text-right">
-                        <p class="text-sm font-black font-mono ${emp.isActive ? 'text-emerald-600' : 'text-slate-300'}">
-                            ${formatIDR(res.amount)}
-                        </p>
-                    </td>
-                    <td class="px-6 py-5 text-center">
-                        <button onclick="toggleStatus('${emp.id}')" class="relative inline-flex h-6 w-11 rounded-full transition-colors ${emp.isActive ? 'bg-emerald-500' : 'bg-slate-300'}">
-                            <span class="inline-block h-4 w-4 transform rounded-full bg-white transition m-1 ${emp.isActive ? 'translate-x-5' : 'translate-x-0'}"></span>
+                    <td class="px-6 py-4 text-right font-mono text-emerald-600 live-amount">${formatIDR(calc.totalAmount)}</td>
+                    <td class="px-6 py-4 text-center">
+                        <button onclick="toggleStatus(${emp.id})" class="text-[10px] font-bold ${emp.isActive ? 'text-emerald-500' : 'text-slate-400'}">
+                            ${emp.isActive ? 'AKTIF' : 'OFF'}
                         </button>
                     </td>
                 `;
-                tbody.appendChild(tr);
+                table.appendChild(row);
             });
-            document.getElementById('grandTotal').innerText = formatIDR(gTotal);
-        }
-
-        function formatD(d) { return new Date(d).toLocaleDateString('id-ID', {day:'numeric', month:'short'}); }
-
-        window.formatAccountingInput = (input) => {
-            let val = input.value.replace(/[^0-9]/g, "");
-            document.getElementById('salary').value = val;
-            input.value = val ? formatIDR(val) : "";
-        };
-
-        window.addHolidayRow = () => {
-            const s = document.getElementById('tempHolidayStart').value;
-            const e = document.getElementById('tempHolidayEnd').value;
-            if(!s || !e) return;
-            currentHolidays.push({ start: createDateFromDay(s).toISOString(), end: createDateFromDay(e).toISOString() });
-            renderHolidayList();
-        };
-
-        window.removeHoliday = (idx) => { currentHolidays.splice(idx, 1); renderHolidayList(); };
-
-        function renderHolidayList() {
-            const list = document.getElementById('holidayList');
-            const msg = document.getElementById('noHolidayMsg');
-            list.innerHTML = '';
-            if (currentHolidays.length === 0) { list.appendChild(msg); msg.classList.remove('hidden'); return; }
-            msg.classList.add('hidden');
-            currentHolidays.forEach((h, i) => {
-                const d = document.createElement('div');
-                d.className = "flex justify-between items-center bg-white p-2 rounded-xl border border-slate-200 text-[10px] font-bold";
-                d.innerHTML = `<span>${formatD(h.start)} - ${formatD(h.end)}</span>
-                <button onclick="removeHoliday(${i})" class="text-red-400">×</button>`;
-                list.appendChild(d);
-            });
+            updateRealTimeValues();
         }
 
         function renderGlobalHolidayList() {
-            const list = document.getElementById('globalHolidayList');
-            list.innerHTML = '';
-            if (globalHolidays.length === 0) {
-                list.innerHTML = `<p class="text-[10px] text-slate-400 italic text-center py-4">Tidak ada libur nasional.</p>`;
-                return;
-            }
+            const container = document.getElementById('globalHolidayList');
+            container.innerHTML = '';
             globalHolidays.forEach((h, i) => {
-                const d = document.createElement('div');
-                d.className = "flex justify-between bg-emerald-50 p-3 rounded-xl border border-emerald-100 text-xs font-bold";
-                d.innerHTML = `<span>${formatD(h.start)} - ${formatD(h.end)}</span>
-                <button onclick="removeGlobalHoliday(${i})" class="text-emerald-500 hover:text-red-500">×</button>`;
-                list.appendChild(d);
+                const div = document.createElement('div');
+                div.className = "flex justify-between text-[10px] bg-emerald-50 p-2 rounded-lg font-bold";
+                div.innerHTML = `<span>${new Date(h.start).toLocaleDateString()} - ${new Date(h.end).toLocaleDateString()}</span>
+                                <button onclick="removeGlobal(${i})" class="text-red-500">X</button>`;
+                container.appendChild(div);
             });
         }
 
-        window.resetForm = () => {
+        function renderHolidayList() {
+            const container = document.getElementById('holidayList');
+            container.innerHTML = '';
+            currentHolidays.forEach((h, i) => {
+                const div = document.createElement('div');
+                div.className = "flex justify-between text-[10px] bg-slate-100 p-2 rounded-lg";
+                div.innerHTML = `<span>${new Date(h.start).toLocaleDateString()} - ${new Date(h.end).toLocaleDateString()}</span>
+                                <button onclick="removeHoliday(${i})" class="text-red-500">X</button>`;
+                container.appendChild(div);
+            });
+        }
+
+        async function toggleStatus(id) {
+            const idx = employees.findIndex(e => e.id == id);
+            employees[idx].isActive = !employees[idx].isActive;
+            await syncToCloud();
+            renderTable();
+        }
+
+        async function removeGlobal(i) { globalHolidays.splice(i, 1); await syncToCloud(); renderGlobalHolidayList(); renderTable(); }
+        function removeHoliday(i) { currentHolidays.splice(i, 1); renderHolidayList(); }
+
+        function resetForm() {
             document.getElementById('editId').value = '';
             document.getElementById('name').value = '';
             document.getElementById('salary').value = '';
@@ -541,24 +375,16 @@
             document.getElementById('startDay').value = '';
             currentHolidays = [];
             renderHolidayList();
-            document.getElementById('formTitle').innerText = "Input Data";
-            document.getElementById('btnSubmit').innerText = "Simpan ke Cloud";
+            document.getElementById('formTitle').innerText = "Data Karyawan";
             document.getElementById('btnCancel').classList.add('hidden');
-        };
+        }
 
         function showNotify(msg) {
             const t = document.getElementById('toast');
             t.innerText = msg;
             t.classList.replace('opacity-0', 'opacity-100');
-            setTimeout(() => t.classList.replace('opacity-100', 'opacity-0'), 2500);
+            setTimeout(() => t.classList.replace('opacity-100', 'opacity-0'), 2000);
         }
-
-        setInterval(() => {
-            document.getElementById('displayToday').innerText = new Date().toLocaleString('id-ID');
-            renderTable();
-        }, 1000);
-
-        init();
     </script>
 </body>
 </html>
